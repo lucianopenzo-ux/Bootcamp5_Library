@@ -8,6 +8,8 @@ using Microsoft.OpenApi;
 
 using TheLibrary.Controllers;
 
+using TheLibrary.Seeding;
+
 using TheLibrary_BusinessLayer.Services;
 using TheLibrary_BusinessLayer.Services.Auth;
 
@@ -82,7 +84,18 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // Add services to the container.
 //AddSingleton, AddScoped, AddTransient
 builder.Services.AddScoped<IBookRepository, BookEFRepository>();
+builder.Services.AddScoped<ILibraryRepository, LibraryEFRepository>();
+builder.Services.AddScoped<ILibraryBranchRepository, LibraryBranchEFRepository>();
+builder.Services.AddScoped<IMembershipRepository, MembershipEFRepository>();
+builder.Services.AddScoped<ILoanRepository, LoanEFRepository>();
+
 builder.Services.AddScoped<IBookService, BookService>();
+builder.Services.AddScoped<ILibraryService, LibraryService>();
+builder.Services.AddScoped<ILibraryBranchService, LibraryBranchService>();
+builder.Services.AddScoped<IMembershipService, MembershipService>();
+builder.Services.AddScoped<ILoanService, LoanService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
 builder.Services.AddControllers();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -101,6 +114,8 @@ builder.Services.AddSwaggerGen(c => {
 });
 
 var app = builder.Build();
+
+await app.UseInitialDataSeedAsync();
 
 // -----------------------------------------------------------------------------
 // 5. Pipeline HTTP: Orden Estricto de Ejecución

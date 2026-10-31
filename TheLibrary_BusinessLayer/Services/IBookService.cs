@@ -1,14 +1,13 @@
 ﻿using TheLibrary.Common.DTOs;
 
-using TheLibrary_DataAccessLayer.Models;
-
 namespace TheLibrary_BusinessLayer.Services
 {
     public interface IBookService
     {
-        PagedResult<BookDTO> GetAllBooks(int pageIndex, int pageSize, string? search    );
-        BookDTO GetBookById(int id);
-        void AddBook(BookCreateDTO book);
-        void DeleteBook(int id);
+        Task<PagedResult<BookDTO>> GetAllBooksAsync(int pageIndex, int pageSize, string? search);
+        Task<BookDTO> GetBookByIdAsync(int id);
+        Task<int> AddBookAsync(BookCreateDTO book);
+        Task UpdateBookAsync(int id, BookCreateDTO book);
+        Task DeleteBookAsync(int id);
     }
 }

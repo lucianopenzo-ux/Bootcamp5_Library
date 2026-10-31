@@ -8,10 +8,8 @@ namespace TheLibrary.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
     public class BookController : ControllerBase
     {
-        // Inyección de dependencias del servicio de libros
         private readonly IBookService _bookService;
 
         public BookController(IBookService bookService)
@@ -19,22 +17,25 @@ namespace TheLibrary.Controllers
             _bookService = bookService;
         }
 
-        // Read
         [HttpGet]
-        public IActionResult GetAll([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
+        public async Task<IActionResult> GetAll([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
         {
-            var books = _bookService.GetAllBooks(pageIndex, pageSize, search);
-            return Ok(books);
-        }
-
-        // Read by Id
-        [HttpGet("{id:int}")]
-        public IActionResult GetBookById(int id)
-        {
-            BookDTO book;
             try
             {
-                book = _bookService.GetBookById(id);
+                return Ok(await _bookService.GetAllBooksAsync(pageIndex, pageSize, search));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            try
+            {
+                return Ok(await _bookService.GetBookByIdAsync(id));
             }
             catch (ArgumentException ex)
             {
@@ -44,54 +45,56 @@ namespace TheLibrary.Controllers
             {
                 return NotFound(new { Message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            return Ok(book);
         }
 
-        // Create
         [HttpPost]
-        public IActionResult Create([FromBody] BookCreateDTO bookCreateDTO)
+        public async Task<IActionResult> Create([FromBody] BookCreateDTO dto)
         {
-            // Lógica para guardar con un 201 Created
             try
             {
-                _bookService.AddBook(bookCreateDTO);
-            }
-            catch (ArgumentNullException ex)
-            {
-                return BadRequest(ex.Message);
+                var id = await _bookService.AddBookAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id }, null);
             }
             catch (ArgumentException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-            return Ok(); // Retornar el libro creado con un 201 Created)
         }
 
-        // Delete
-        [HttpDelete("{id:int}")]
-        public IActionResult DeleteBook(int id)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, [FromBody] BookCreateDTO dto)
         {
             try
             {
-                _bookService.DeleteBook(id);
+                await _bookService.UpdateBookAsync(id, dto);
+                return NoContent();
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
-
-                return NotFound(ex.Message);
+                return BadRequest(ex.Message);
             }
-            return NoContent();
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
         }
 
-        // Update 
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                await _bookService.DeleteBookAsync(id);
+                return NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+        }
     }
 }
