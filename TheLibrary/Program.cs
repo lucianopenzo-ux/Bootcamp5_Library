@@ -17,6 +17,8 @@ using TheLibrary_DataAccessLayer.Data;
 using TheLibrary_DataAccessLayer.Models;
 using TheLibrary_DataAccessLayer.Repositories;
 
+using TheLibrary_PresentationLayer.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 //var service = new BookService();
@@ -113,6 +115,17 @@ builder.Services.AddSwaggerGen(c => {
     });
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontendApp", policy =>
+    {
+        policy.AllowAnyOrigin() //Esto SOLO PARA DESARROLLO. En producción, reemplazar con la URL de tu frontend
+        //policy.WithOrigins("http://localhost:3000") // Cambia esto a la URL de tu frontend
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 await app.UseInitialDataSeedAsync();
@@ -130,12 +143,16 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseCors("AllowFrontendApp"); // Esto permite que el frontend (React, Angular, etc.) haga peticiones a nuestra API
+
 app.UseHttpsRedirection();
 
 // ¡REGLA DE ORO DE ASP.NET CORE!:
 // UseAuthentication debe ejecutarse obligatoriamente ANTES de UseAuthorization
 app.UseAuthentication(); // 1. ¿Quién sos? Lee el header y valida el token
 app.UseAuthorization();  // 2. ¿Tenés permiso? Evalúa [Authorize] y roles
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.MapControllers();
 
