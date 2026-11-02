@@ -9,8 +9,8 @@ Este proyecto ya quedó **preparado** para ejecutar seed controlado por configur
 	- 1 rol: `User`
 	- 1 library: `Seed Central Library`
 	- 1 branch: `Seed Main Branch`
-	- 1 usuario: `seed.user@thelibrary.local`
-	- 1 libro: ISBN `SEED-BOOK-0001`
+	- 100 usuarios con propiedades completas de Identity y datos personales válidos.
+	- 100 libros con título, autor, ISBN, año, disponibilidad y sucursal.
 - `Seeding/SeedApplicationBuilderExtensions.cs`
   - Expone `UseInitialDataSeedAsync()` para correr seed desde `Program.cs`.
 - `Program.cs`
@@ -55,28 +55,21 @@ Editar archivo:
 
 - `TheLibrary/Seeding/InitialDataSeeder.cs`
 
-### Para agregar más usuarios
+### Identificadores de los datos
 
-Dentro de `SeedAsync`, repetir el patrón de búsqueda + creación:
-
-1. Buscar por email (`FindByEmailAsync`).
-2. Si no existe, crear con `CreateAsync`.
-3. Asignar rol con `AddToRoleAsync`.
-
-### Para agregar más libros
-
-Dentro de `SeedAsync`, repetir patrón por ISBN:
-
-1. Buscar por ISBN en `dbContext.Books`.
-2. Si no existe, crear `Book` y guardar.
+- El primer usuario conserva el email `seed.user@thelibrary.local`; los restantes usan el formato
+  `seed.userNNN@thelibrary.local`.
+- Los libros usan ISBN en el formato `SEED-BOOK-NNNN`.
+- Estos identificadores permiten ejecutar el seed varias veces sin duplicar registros.
 
 ---
 
 ## Recomendaciones importantes
 
 - El seeder está hecho para ser **idempotente** (no duplica si ya existe).
-- Si falla creación de usuario, revisar que el password cumpla políticas de Identity.
-- Para ambientes reales, preferí password de seed en secretos/variables de entorno.
+- Si falla la creación de usuarios, revisar que el password cumpla las políticas de Identity.
+- `DefaultUserPassword` se usa para los 100 usuarios seed. Para ambientes reales, debe configurarse
+  mediante secretos o variables de entorno y no reutilizar la contraseña de desarrollo.
 
 ---
 

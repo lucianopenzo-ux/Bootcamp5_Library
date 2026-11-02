@@ -128,7 +128,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-await app.UseInitialDataSeedAsync();
+await app.UseInitialDataSeedAsync(); // Esto ejecuta la semilla de datos inicial si está habilitada en appsettings.json
 
 // -----------------------------------------------------------------------------
 // 5. Pipeline HTTP: Orden Estricto de Ejecución

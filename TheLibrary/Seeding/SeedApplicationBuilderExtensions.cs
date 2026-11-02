@@ -6,6 +6,12 @@ namespace TheLibrary.Seeding
 {
     public static class SeedApplicationBuilderExtensions
     {
+        /// <summary>
+        /// Ejecuta la semilla de datos inicial si está habilitada en appsettings.json
+        /// </summary>
+        /// <param name="app">La aplicación web</param>
+        /// <returns>La aplicación web con la semilla de datos ejecutada si está habilitada</returns>
+
         public static async Task<WebApplication> UseInitialDataSeedAsync(this WebApplication app)
         {
             var seedEnabled = app.Configuration.GetValue<bool>("SeedData:Enabled");

@@ -10,6 +10,13 @@ namespace TheLibrary.Seeding
 {
     public static class InitialDataSeeder
     {
+        /// <summary>
+        /// Semilla de datos inicial para la aplicación
+        /// </summary>
+        /// <param name="services">El proveedor de servicios</param>
+        /// <param name="configuration">La configuración de la aplicación</param>
+        /// <param name="logger">El logger</param>
+        /// <returns>Una tarea que representa la operación asincrónica</returns>
         public static async Task SeedAsync(
             IServiceProvider services,
             IConfiguration configuration,
@@ -55,54 +62,116 @@ namespace TheLibrary.Seeding
                 logger.LogInformation("LibraryBranch de seed creada.");
             }
 
-            var seedUserEmail = "seed.user@thelibrary.local";
             var seedUserPassword = configuration["SeedData:DefaultUserPassword"] ?? "Seed1234";
 
-            var user = await userManager.FindByEmailAsync(seedUserEmail);
-            if (user == null)
+            var firstNames = new[]
             {
-                user = new User
-                {
-                    UserName = seedUserEmail,
-                    Email = seedUserEmail,
-                    FirstName = "Seed",
-                    LastName = "User",
-                    EmailConfirmed = true
-                };
+                "Ana", "Bruno", "Carla", "Diego", "Elena",
+                "Facundo", "Gabriela", "Hugo", "Irene", "Julián"
+            };
+            var lastNames = new[]
+            {
+                "Acosta", "Benítez", "Cabrera", "Domínguez", "Escobar",
+                "Fernández", "Gómez", "Herrera", "Ibarra", "Juárez"
+            };
 
-                var createResult = await userManager.CreateAsync(user, seedUserPassword);
-                if (!createResult.Succeeded)
+            for (var index = 1; index <= 100; index++)
+            {
+                var email = index == 1
+                    ? "seed.user@thelibrary.local"
+                    : $"seed.user{index:000}@thelibrary.local";
+                var firstName = index == 1 ? "Seed" : firstNames[(index - 2) % firstNames.Length];
+                var lastName = index == 1 ? "User" : lastNames[(index - 2) / firstNames.Length % lastNames.Length];
+                // PostgreSQL (timestamp with time zone) solo acepta DateTime en UTC
+                var dateOfBirth = new DateTime(1980 + (index % 25), (index % 12) + 1, (index % 28) + 1, 0, 0, 0, DateTimeKind.Utc);
+                var user = await userManager.FindByEmailAsync(email);
+
+                if (user == null)
                 {
-                    var errors = string.Join(" | ", createResult.Errors.Select(e => e.Description));
-                    throw new InvalidOperationException($"No se pudo crear el usuario de seed: {errors}");
+                    user = new User
+                    {
+                        UserName = email,
+                        Email = email,
+                        FirstName = firstName,
+                        LastName = lastName,
+                        DateOfBirth = dateOfBirth,
+                        EmailConfirmed = true
+                    };
+
+                    var createResult = await userManager.CreateAsync(user, seedUserPassword);
+                    if (!createResult.Succeeded)
+                    {
+                        var errors = string.Join(" | ", createResult.Errors.Select(e => e.Description));
+                        throw new InvalidOperationException($"No se pudo crear el usuario '{email}': {errors}");
+                    }
+                }
+                else if (user.DateOfBirth == null)
+                {
+                    user.DateOfBirth = dateOfBirth;
+                    var updateResult = await userManager.UpdateAsync(user);
+                    if (!updateResult.Succeeded)
+                    {
+                        var errors = string.Join(" | ", updateResult.Errors.Select(e => e.Description));
+                        throw new InvalidOperationException($"No se pudo completar el usuario '{email}': {errors}");
+                    }
                 }
 
-                logger.LogInformation("User de seed creado.");
-            }
-
-            if (!await userManager.IsInRoleAsync(user, userRole))
-            {
-                await userManager.AddToRoleAsync(user, userRole);
-                logger.LogInformation("Rol '{Role}' asignado al user de seed.", userRole);
-            }
-
-            var seedIsbn = "SEED-BOOK-0001";
-            var existingBook = await dbContext.Books.FirstOrDefaultAsync(b => b.ISBN == seedIsbn);
-            if (existingBook == null)
-            {
-                dbContext.Books.Add(new Book
+                if (!await userManager.IsInRoleAsync(user, userRole))
                 {
-                    Title = "Seed Book - Introducción a TheLibrary",
-                    Author = "Seed System",
-                    ISBN = seedIsbn,
-                    Year = "2026",
-                    IsAvailable = true,
+                    var roleResult = await userManager.AddToRoleAsync(user, userRole);
+                    if (!roleResult.Succeeded)
+                    {
+                        var errors = string.Join(" | ", roleResult.Errors.Select(e => e.Description));
+                        throw new InvalidOperationException($"No se pudo asignar el rol '{userRole}' al usuario '{email}': {errors}");
+                    }
+                }
+            }
+
+            logger.LogInformation("Se verificaron 100 usuarios de seed.");
+
+            var titles = new[]
+            {
+                "El arte de leer", "Historias del mundo", "Introducción a la ciencia",
+                "Viaje por las palabras", "Principios de programación", "La ciudad y sus historias",
+                "Guía de pensamiento crítico", "Atlas de conocimientos", "Cuentos para compartir",
+                "Fundamentos de investigación"
+            };
+            var authors = new[]
+            {
+                "Seed System", "María López", "Carlos Méndez", "Laura Ramírez", "Jorge Navarro",
+                "Sofía Torres", "Pablo Castro", "Valentina Ruiz", "Martín Silva", "Lucía Ortiz"
+            };
+            var booksToAdd = new List<Book>();
+
+            for (var index = 1; index <= 100; index++)
+            {
+                var isbn = $"SEED-BOOK-{index:0000}";
+                var existingBook = await dbContext.Books.FirstOrDefaultAsync(b => b.ISBN == isbn);
+                if (existingBook != null)
+                {
+                    continue;
+                }
+
+                booksToAdd.Add(new Book
+                {
+                    Title = index == 1
+                        ? "Seed Book - Introducción a TheLibrary"
+                        : $"{titles[(index - 2) % titles.Length]} {index:000}",
+                    Author = authors[(index - 1) % authors.Length],
+                    ISBN = isbn,
+                    Year = (2000 + (index % 27)).ToString(),
+                    IsAvailable = index % 4 != 0,
                     LibraryBranchId = branch.Id
                 });
-
-                await dbContext.SaveChangesAsync();
-                logger.LogInformation("Book de seed creado.");
             }
+
+            if (booksToAdd.Count > 0)
+            {
+                await dbContext.Books.AddRangeAsync(booksToAdd);
+                await dbContext.SaveChangesAsync();
+            }
+
+            logger.LogInformation("Se verificaron 100 libros de seed.");
 
             logger.LogInformation("Seed inicial finalizado.");
         }
